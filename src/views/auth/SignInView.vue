@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import RouterButton from '@/components/RouterButton.vue'
 import CryptoJS from 'crypto-js'
-import { useStorage } from '@vueuse/core'
 import { RouteNames } from '@/router'
 
 function base64UrlEncode(input: string): string {
@@ -26,7 +25,7 @@ function generateKeycloackAuthLink(): string {
   const codeChallenge = generateCodeChallenge(codeVerifier)
 
   console.log(`Saving code verifier ${codeVerifier} to the local storage`)
-  useStorage('codeVerifier', codeVerifier)
+  localStorage.setItem('codeVerifier', codeVerifier)
 
   const keycloakHost = import.meta.env.VITE_KEYCLOAK_HOST
   const frontendHost = import.meta.env.VITE_FRONTEND_HOST
