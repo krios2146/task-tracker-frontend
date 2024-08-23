@@ -1,21 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import SignInView from '@/views/auth/SignInView.vue'
+import KeycloakView from '@/views/auth/KeycloakView.vue'
+import HomeView from '@/views/HomeView.vue'
+
+export const enum RouteNames {
+  HOME = 'home',
+  SIGN_IN = 'sign-in',
+  KEYCLOAK_AUTH = 'keycloak-auth'
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/', name: RouteNames.HOME, component: HomeView },
+    { path: '/auth/sign-in', name: RouteNames.SIGN_IN, component: SignInView },
     {
-      path: '/',
-      name: 'home',
-      component: HomeView
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
+      path: '/auth/keycloak/callback',
+      name: RouteNames.KEYCLOAK_AUTH,
+      component: KeycloakView
     }
   ]
 })
