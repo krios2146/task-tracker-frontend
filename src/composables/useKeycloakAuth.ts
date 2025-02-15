@@ -67,7 +67,7 @@ export function useKeycloakAuth(
       }
 
       if (error.value) {
-        return failAuth('Keycloak responded with an error')
+        return failAuth(`Keycloak responded with an error: ${error.value}`)
       }
 
       const keycloakResponse = response.value?.data
