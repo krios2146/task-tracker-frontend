@@ -11,7 +11,7 @@ const username: Ref<string | undefined> = ref()
 
 const { token, found } = useIdToken()
 
-if (found) {
+if (found.value) {
   const idTokenPayload = jwtDecode<IdToken>(token.value)
   username.value = idTokenPayload.preferred_username
 }
