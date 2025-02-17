@@ -22,5 +22,6 @@ if (found.value) {
     <h1 class="text-4xl">Home</h1>
     <p v-if="username">Hello, {{ username }}</p>
     <RouterButton :route-name="RouteNames.SIGN_IN">Sign in</RouterButton>
+    <RouterButton :route-name="RouteNames.BOARD">Board</RouterButton>
   </div>
 </template>
