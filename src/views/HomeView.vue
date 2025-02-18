@@ -18,7 +18,7 @@ if (found.value) {
 </script>
 
 <template>
-  <div class="flex flex-col justify-center items-center gap-y-2 text-white">
+  <div class="flex flex-col justify-center items-center gap-y-2 text-white h-screen">
     <h1 class="text-4xl">Home</h1>
     <p v-if="username">Hello, {{ username }}</p>
     <RouterButton :route-name="RouteNames.SIGN_IN">Sign in</RouterButton>
