@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import BoardList from '@/components/BoardList.vue'
 import { ref } from 'vue'
-
-interface Task {
-  id: number
-  title: string
-  list_id: number
-  next_id: number | undefined
-  prev_id: number | undefined
-}
+import { useMouse } from '@vueuse/core'
+import { computed } from 'vue'
 
 interface List {
   id: number
@@ -122,8 +116,38 @@ const tasks = ref<Task[]>([
     list_id: 2,
     next_id: undefined,
     prev_id: 11
+  },
+  {
+    id: 13,
+    title:
+      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique animi, quas delectus, ullam tenetur quae nesciunt laudantium odit deleniti quaerat sit laboriosam suscipit cupiditate saepe quod voluptas, facilis dolor nostrum.',
+    list_id: 1,
+    next_id: undefined,
+    prev_id: 11
+  },
+  {
+    id: 14,
+    title:
+      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique animi, quas delectus, ullam tenetur quae nesciunt laudantium odit deleniti quaerat sit laboriosam suscipit cupiditate saepe quod voluptas, facilis dolor nostrum.',
+    list_id: 1,
+    next_id: undefined,
+    prev_id: 11
   }
 ])
+
+type MouseCoordinates = {
+  x: number
+  y: number
+}
+
+const { x, y } = useMouse()
+
+const mouseCoordinates = computed<MouseCoordinates>(() => {
+  return {
+    x: x.value,
+    y: y.value
+  }
+})
 
 function listTasks(listId: number): Task[] {
   return tasks.value.filter((t) => t.list_id == listId)
@@ -132,8 +156,14 @@ function listTasks(listId: number): Task[] {
 
 <template>
   <div class="p-3 h-screen">
-    <div class="flex flex-row gap-4 justify-start max-h-full">
-      <BoardList v-for="list in lists" :key="list.id" :tasks="listTasks(list.id)" :list="list" />
+    <div class="flex flex-row gap-4 justify-start max-h-full min-h-full">
+      <BoardList
+        v-for="list in lists"
+        :key="list.id"
+        :tasks="listTasks(list.id)"
+        :list="list"
+        :mouse-coordinates="mouseCoordinates"
+      />
     </div>
   </div>
 </template>

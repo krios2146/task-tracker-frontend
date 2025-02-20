@@ -1,25 +1,62 @@
 <script setup lang="ts">
 import { useMouseInElement, useMousePressed } from '@vueuse/core'
+import { watchEffect } from 'vue'
 import { watch } from 'vue'
 import { computed, ref } from 'vue'
 import { useTemplateRef } from 'vue'
 
+type MouseCoordinates = {
+  x: number
+  y: number
+}
+
+const props = defineProps<{
+  mouseCoordinates: MouseCoordinates
+  task: Task
+}>()
+const emit = defineEmits<{
+  dragging: [taskId: number]
+  released: [taskId: number]
+  mouseAbove: [taskId: number]
+  mouseBelow: [taskId: number]
+}>()
+
 const taskElement = useTemplateRef('task')
 
-const { x, y, elementX, elementY, isOutside } = useMouseInElement(taskElement)
+const { elementPositionY, elementHeight, elementX, elementY, isOutside } =
+  useMouseInElement(taskElement)
 const { pressed } = useMousePressed({ target: taskElement })
 
 const dragging = ref(false)
-const offsetX = ref(0)
-const offsetY = ref(0)
 
-watch(pressed, (isPressed) => {
-  if (!isPressed) {
+const elementOffsetX = ref(0)
+const elementOffsetY = ref(0)
+
+const elementAbsoluteX = computed(() => props.mouseCoordinates.x - elementOffsetX.value)
+const elementAbsoluteY = computed(() => props.mouseCoordinates.y - elementOffsetY.value)
+
+const elementHorizontalBreakpoint = computed(() => elementPositionY.value + elementHeight.value / 2)
+
+const isMouseAboveTask = computed(() => {
+  if (isOutside.value) {
+    return false
+  }
+  return props.mouseCoordinates.y < elementHorizontalBreakpoint.value
+})
+const isMouseBelowTask = computed(() => {
+  if (isOutside.value) {
+    return false
+  }
+  return props.mouseCoordinates.y > elementHorizontalBreakpoint.value
+})
+
+watch(pressed, (mousePressed) => {
+  if (!mousePressed) {
     return
   }
 
-  offsetX.value = elementX.value
-  offsetY.value = elementY.value
+  elementOffsetX.value = elementX.value
+  elementOffsetY.value = elementY.value
 })
 
 watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
@@ -31,26 +68,38 @@ watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
   }
 })
 
-const gripX = computed(() => x.value - offsetX.value)
-const gripY = computed(() => y.value - offsetY.value)
+watchEffect(() => {
+  if (dragging.value) {
+    emit('dragging', props.task.id)
+  }
+  if (!dragging.value) {
+    emit('released', props.task.id)
+  }
+})
+
+watchEffect(() => {
+  if (isMouseAboveTask.value) {
+    emit('mouseAbove', props.task.id)
+  }
+  if (isMouseBelowTask.value) {
+    emit('mouseBelow', props.task.id)
+  }
+})
 </script>
 
 <template>
   <div
+    v-bind="$attrs"
     ref="task"
     :class="{ 'rotate-3 absolute dragging-card-w': dragging }"
-    :style="dragging ? { top: gripY + 'px', left: gripX + 'px' } : {}"
+    :style="dragging ? { top: elementAbsoluteY + 'px', left: elementAbsoluteX + 'px' } : {}"
     class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 hover:ring"
   >
-    <p class="text-gray-200 select-none">
-      <slot></slot>
-    </p>
+    <p class="text-gray-200 select-none">{{ task.title }}</p>
   </div>
 
   <div :class="{ hidden: !dragging }" class="p-2 px-3 rounded-md bg-gray-900">
-    <p class="opacity-0">
-      <slot></slot>
-    </p>
+    <p class="opacity-0">{{ task.title }}</p>
   </div>
 </template>
 
