@@ -6,6 +6,8 @@ interface Task {
   id: number
   title: string
   list_id: number
+  next_id: number | undefined
+  prev_id: number | undefined
 }
 
 interface List {
@@ -40,62 +42,86 @@ const tasks = ref<Task[]>([
   {
     id: 1,
     title: 'CI/CD for task-tracker',
-    list_id: 1
+    list_id: 1,
+    next_id: 3,
+    prev_id: 2
   },
   {
     id: 2,
     title: 'Tests for all API methods',
-    list_id: 1
+    list_id: 1,
+    next_id: 1,
+    prev_id: undefined
   },
   {
     id: 3,
     title: 'OpenAPI documentation for all API endpoints',
-    list_id: 1
+    list_id: 1,
+    next_id: 4,
+    prev_id: 2
   },
   {
     id: 4,
     title: 'Kotlindoc for all methods inside API',
-    list_id: 1
+    list_id: 1,
+    next_id: 5,
+    prev_id: 3
   },
   {
     id: 5,
     title: 'Flow charts of every opration in excalidraw',
-    list_id: 1
+    list_id: 1,
+    next_id: 6,
+    prev_id: 4
   },
   {
     id: 6,
     title: 'README for every project repository',
-    list_id: 1
+    list_id: 1,
+    next_id: 7,
+    prev_id: 5
   },
   {
     id: 7,
     title: 'Grafana monitoring?',
-    list_id: 1
+    list_id: 1,
+    next_id: 8,
+    prev_id: 6
   },
   {
     id: 8,
     title: 'Deploy with docker swarm',
-    list_id: 1
+    list_id: 1,
+    next_id: 9,
+    prev_id: 7
   },
   {
     id: 9,
     title: 'Drag-n-drop for tasks between lists',
-    list_id: 3
+    list_id: 3,
+    next_id: 10,
+    prev_id: 8
   },
   {
     id: 10,
     title: 'Custom lists creation button',
-    list_id: 2
+    list_id: 2,
+    next_id: 11,
+    prev_id: 9
   },
   {
     id: 11,
     title: 'Lists drag-n-drop',
-    list_id: 2
+    list_id: 2,
+    next_id: 12,
+    prev_id: 10
   },
   {
     id: 12,
     title: 'Respect position of the dropped task in a list',
-    list_id: 2
+    list_id: 2,
+    next_id: undefined,
+    prev_id: 11
   }
 ])
 
@@ -107,9 +133,7 @@ function listTasks(listId: number): Task[] {
 <template>
   <div class="p-3 h-screen">
     <div class="flex flex-row gap-4 justify-start max-h-full">
-      <BoardList v-for="list in lists" :key="list.id" :tasks="listTasks(list.id)">
-        {{ list.name }}
-      </BoardList>
+      <BoardList v-for="list in lists" :key="list.id" :tasks="listTasks(list.id)" :list="list" />
     </div>
   </div>
 </template>
