@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useMouseInElement, useMousePressed } from '@vueuse/core'
-import { watchEffect } from 'vue'
 import { watch } from 'vue'
 import { computed, ref } from 'vue'
 import { useTemplateRef } from 'vue'
+import { useDraggingStore } from '@/stores/draggingStore'
 
 type MouseCoordinates = {
   x: number
@@ -15,8 +15,6 @@ const props = defineProps<{
   task: Task
 }>()
 const emit = defineEmits<{
-  dragging: [taskId: number]
-  released: [taskId: number]
   mouseAbove: [taskId: number]
   mouseBelow: [taskId: number]
 }>()
@@ -26,6 +24,8 @@ const taskElement = useTemplateRef('task')
 const { elementPositionY, elementHeight, elementX, elementY, isOutside } =
   useMouseInElement(taskElement)
 const { pressed } = useMousePressed({ target: taskElement })
+
+const draggingStore = useDraggingStore()
 
 const dragging = ref(false)
 
@@ -70,10 +70,10 @@ watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
 
 watch(dragging, (dragging) => {
   if (dragging) {
-    emit('dragging', props.task.id)
+    draggingStore.set(props.task)
   }
   if (!dragging) {
-    emit('released', props.task.id)
+    draggingStore.remove()
   }
 })
 

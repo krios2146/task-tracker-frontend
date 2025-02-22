@@ -3,6 +3,7 @@ import BoardListTask from './BoardListTask.vue'
 import BoardListAddButton from './BoardListAddButton.vue'
 import { ref } from 'vue'
 import { watch } from 'vue'
+import { useDraggingStore } from '@/stores/draggingStore'
 
 type MouseCoordinates = {
   x: number
@@ -23,6 +24,8 @@ const emit = defineEmits<{
   tasksReordered: [tasks: Task[]]
 }>()
 
+const draggingStore = useDraggingStore()
+
 const localTasks = ref<Task[]>([])
 const sortedTasks = ref<Task[]>([])
 
@@ -42,6 +45,11 @@ watch(
     sortedTasks.value = sortTasks(localTasks)
   },
   { immediate: true }
+)
+
+watch(
+  () => draggingStore.get,
+  (task) => (draggingTask.value = task)
 )
 
 function sortTasks(tasks: Task[]): Task[] {
@@ -78,14 +86,6 @@ function findTask(taskId: number | undefined): Task | undefined {
     return undefined
   }
   return localTasks.value.find((task) => task.id === taskId)
-}
-
-function atDragging(taskId: number) {
-  draggingTask.value = findTask(taskId)
-}
-
-function atReleased(taskId: number) {
-  draggingTask.value = undefined
 }
 
 function atMouseAbove(taskId: number) {
@@ -173,7 +173,7 @@ function atMouseBelow(taskId: number) {
 
 <template>
   <div class="min-w-2xs max-w-2xs">
-    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full">
+    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full" ref="list">
       <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
 
       <div class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden">
@@ -183,8 +183,6 @@ function atMouseBelow(taskId: number) {
           :data-id="task.id"
           :task="task"
           :mouse-coordinates="mouseCoordinates"
-          @dragging="atDragging"
-          @released="atReleased"
           @mouse-above="atMouseAbove"
           @mouse-below="atMouseBelow"
         />
