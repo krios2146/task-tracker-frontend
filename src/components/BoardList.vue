@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import BoardListTask from './BoardListTask.vue'
 import BoardListAddButton from './BoardListAddButton.vue'
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { watch } from 'vue'
-import { useTemplateRefsList } from '@vueuse/core'
-import { watchEffect } from 'vue'
-import { watchPostEffect } from 'vue'
 
 type MouseCoordinates = {
   x: number
@@ -17,46 +14,160 @@ interface List {
   name: string
 }
 
-const props = defineProps<{ tasks: Task[]; list: List; mouseCoordinates: MouseCoordinates }>()
+const props = defineProps<{
+  tasks: Task[]
+  list: List
+  mouseCoordinates: MouseCoordinates
+}>()
+const emit = defineEmits<{
+  tasksReordered: [tasks: Task[]]
+}>()
 
-const tasks = ref<Task[]>(props.tasks)
-
+const localTasks = ref<Task[]>([])
 const sortedTasks = ref<Task[]>([])
 
-watchEffect(() => (tasks.value = props.tasks))
+const draggingTask = ref<Task | undefined>()
 
 watch(
-  tasks,
-  (updatedTasks) => {
-    sortedTasks.value = updatedTasks.sort((a, b) => {
-      if (a.next_id == b.id || b.prev_id == a.id) {
-        return -1
-      }
-      if (a.prev_id == b.id || b.next_id == a.id) {
-        return 1
-      }
-      return 0
-    })
+  props.tasks,
+  (tasks) => {
+    localTasks.value = tasks
   },
   { immediate: true }
 )
 
-const taskElements = useTemplateRefsList<HTMLDivElement>()
+watch(
+  localTasks.value,
+  (localTasks) => {
+    sortedTasks.value = sortTasks(localTasks)
+  },
+  { immediate: true }
+)
+
+function sortTasks(tasks: Task[]): Task[] {
+  const tasksMap = new Map(tasks.map((task) => [task.id, task]))
+
+  const firstTask = tasks.find((task) => {
+    if (task.prev_id === undefined) {
+      return task
+    }
+    if (tasksMap.get(task.prev_id) === undefined) {
+      return task
+    }
+  })
+
+  let currentTask = firstTask
+
+  const sortedTasks = []
+
+  while (currentTask !== undefined) {
+    sortedTasks.push(currentTask)
+
+    if (currentTask.next_id === undefined) {
+      break
+    }
+
+    currentTask = tasksMap.get(currentTask.next_id) || undefined
+  }
+
+  return sortedTasks
+}
+
+function findTask(taskId: number | undefined): Task | undefined {
+  if (taskId === undefined) {
+    return undefined
+  }
+  return localTasks.value.find((task) => task.id === taskId)
+}
 
 function atDragging(taskId: number) {
-  console.debug(`User dragging task ${taskId}`)
+  draggingTask.value = findTask(taskId)
 }
 
 function atReleased(taskId: number) {
-  console.debug(`User released task ${taskId}`)
+  draggingTask.value = undefined
 }
 
 function atMouseAbove(taskId: number) {
-  console.debug(`Mouse above task ${taskId}`)
+  if (draggingTask.value === undefined) {
+    return
+  }
+
+  const reorderedTasks = []
+
+  const aboveDraggingTask = findTask(draggingTask.value.prev_id)
+  const belowDraggingTask = findTask(draggingTask.value.next_id)
+
+  if (aboveDraggingTask !== undefined) {
+    aboveDraggingTask.next_id = belowDraggingTask?.id
+    reorderedTasks.push(aboveDraggingTask)
+  }
+  if (belowDraggingTask !== undefined) {
+    belowDraggingTask.prev_id = aboveDraggingTask?.id
+    reorderedTasks.push(belowDraggingTask)
+  }
+
+  const taskBelow = findTask(taskId)!
+  const taskAbove = findTask(taskBelow.prev_id)
+
+  if (taskAbove === undefined) {
+    draggingTask.value.prev_id = taskBelow.prev_id
+  }
+
+  taskBelow.prev_id = draggingTask.value.id
+
+  if (taskAbove !== undefined && taskAbove.id !== draggingTask.value.id) {
+    taskAbove.next_id = draggingTask.value.id
+    draggingTask.value.prev_id = taskAbove.id
+    reorderedTasks.push(taskAbove)
+  }
+
+  draggingTask.value.next_id = taskBelow.id
+
+  reorderedTasks.push(draggingTask.value)
+
+  emit('tasksReordered', reorderedTasks)
 }
 
 function atMouseBelow(taskId: number) {
-  console.debug(`Mouse below task ${taskId}`)
+  if (draggingTask.value === undefined) {
+    return
+  }
+
+  const reorderedTasks = []
+
+  const aboveDraggingTask = findTask(draggingTask.value.prev_id)
+  const belowDraggingTask = findTask(draggingTask.value.next_id)
+
+  if (aboveDraggingTask !== undefined) {
+    aboveDraggingTask.next_id = belowDraggingTask?.id
+    reorderedTasks.push(aboveDraggingTask)
+  }
+  if (belowDraggingTask !== undefined) {
+    belowDraggingTask.prev_id = aboveDraggingTask?.id
+    reorderedTasks.push(belowDraggingTask)
+  }
+
+  const taskAbove = findTask(taskId)!
+  const taskBelow = findTask(taskAbove.next_id)
+
+  if (taskBelow === undefined) {
+    draggingTask.value.next_id = taskAbove.next_id
+  }
+
+  taskAbove.next_id = draggingTask.value.id
+
+  if (taskBelow !== undefined && taskBelow.id !== draggingTask.value.id) {
+    taskBelow.prev_id = draggingTask.value.id
+    draggingTask.value.next_id = taskBelow.id
+    reorderedTasks.push(taskBelow)
+  }
+
+  draggingTask.value.prev_id = taskAbove.id
+
+  reorderedTasks.push(draggingTask.value)
+
+  emit('tasksReordered', reorderedTasks)
 }
 </script>
 
@@ -69,7 +180,6 @@ function atMouseBelow(taskId: number) {
         <BoardListTask
           v-for="task in sortedTasks"
           :key="task.id"
-          :ref="taskElements.set"
           :data-id="task.id"
           :task="task"
           :mouse-coordinates="mouseCoordinates"

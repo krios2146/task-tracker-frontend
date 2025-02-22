@@ -86,7 +86,7 @@ const tasks = ref<Task[]>([
     id: 8,
     title: 'Deploy with docker swarm',
     list_id: 1,
-    next_id: 9,
+    next_id: 13,
     prev_id: 7
   },
   {
@@ -114,16 +114,16 @@ const tasks = ref<Task[]>([
     id: 12,
     title: 'Respect position of the dropped task in a list',
     list_id: 2,
-    next_id: undefined,
-    prev_id: 11
+    next_id: 13,
+    prev_id: 8
   },
   {
     id: 13,
     title:
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique animi, quas delectus, ullam tenetur quae nesciunt laudantium odit deleniti quaerat sit laboriosam suscipit cupiditate saepe quod voluptas, facilis dolor nostrum.',
     list_id: 1,
-    next_id: undefined,
-    prev_id: 11
+    next_id: 14,
+    prev_id: 12
   },
   {
     id: 14,
@@ -131,7 +131,7 @@ const tasks = ref<Task[]>([
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique animi, quas delectus, ullam tenetur quae nesciunt laudantium odit deleniti quaerat sit laboriosam suscipit cupiditate saepe quod voluptas, facilis dolor nostrum.',
     list_id: 1,
     next_id: undefined,
-    prev_id: 11
+    prev_id: 13
   }
 ])
 
@@ -152,6 +152,23 @@ const mouseCoordinates = computed<MouseCoordinates>(() => {
 function listTasks(listId: number): Task[] {
   return tasks.value.filter((t) => t.list_id == listId)
 }
+
+function reorderTasks(reorderedTasks: Task[]): void {
+  const hasBeenReordered = (task: Task) =>
+    reorderedTasks.some((reorderedTask) => reorderedTask.id == task.id)
+
+  const findReorderedTask = (task: Task) =>
+    reorderedTasks.find((reorderedTask) => reorderedTask.id == task.id)
+
+  tasks.value.forEach((task) => {
+    if (hasBeenReordered(task)) {
+      const reorderedTask = findReorderedTask(task)!
+
+      task.next_id = reorderedTask.next_id
+      task.prev_id = reorderedTask.prev_id
+    }
+  })
+}
 </script>
 
 <template>
@@ -163,6 +180,7 @@ function listTasks(listId: number): Task[] {
         :tasks="listTasks(list.id)"
         :list="list"
         :mouse-coordinates="mouseCoordinates"
+        @tasks-reordered="reorderTasks"
       />
     </div>
   </div>

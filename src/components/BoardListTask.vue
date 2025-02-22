@@ -68,23 +68,26 @@ watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
   }
 })
 
-watchEffect(() => {
-  if (dragging.value) {
+watch(dragging, (dragging) => {
+  if (dragging) {
     emit('dragging', props.task.id)
   }
-  if (!dragging.value) {
+  if (!dragging) {
     emit('released', props.task.id)
   }
 })
 
-watchEffect(() => {
-  if (isMouseAboveTask.value) {
-    emit('mouseAbove', props.task.id)
+watch(
+  [isMouseAboveTask, isMouseBelowTask, dragging],
+  ([isMouseAboveTask, isMouseBelowTask, dragging]) => {
+    if (isMouseAboveTask && !dragging) {
+      emit('mouseAbove', props.task.id)
+    }
+    if (isMouseBelowTask && !dragging) {
+      emit('mouseBelow', props.task.id)
+    }
   }
-  if (isMouseBelowTask.value) {
-    emit('mouseBelow', props.task.id)
-  }
-})
+)
 </script>
 
 <template>
