@@ -3,6 +3,8 @@ import BoardList from '@/components/BoardList.vue'
 import { ref } from 'vue'
 import { useMouse } from '@vueuse/core'
 import { computed } from 'vue'
+import { useDraggingStore } from '@/stores/draggingStore'
+import { watch } from 'vue'
 
 interface List {
   id: number
@@ -93,15 +95,15 @@ const tasks = ref<Task[]>([
     id: 9,
     title: 'Drag-n-drop for tasks between lists',
     list_id: 3,
-    next_id: 10,
-    prev_id: 8
+    next_id: undefined,
+    prev_id: undefined
   },
   {
     id: 10,
     title: 'Custom lists creation button',
     list_id: 2,
     next_id: 11,
-    prev_id: 9
+    prev_id: undefined
   },
   {
     id: 11,
@@ -114,8 +116,8 @@ const tasks = ref<Task[]>([
     id: 12,
     title: 'Respect position of the dropped task in a list',
     list_id: 2,
-    next_id: 13,
-    prev_id: 8
+    next_id: undefined,
+    prev_id: 11
   },
   {
     id: 13,
@@ -123,7 +125,7 @@ const tasks = ref<Task[]>([
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique animi, quas delectus, ullam tenetur quae nesciunt laudantium odit deleniti quaerat sit laboriosam suscipit cupiditate saepe quod voluptas, facilis dolor nostrum.',
     list_id: 1,
     next_id: 14,
-    prev_id: 12
+    prev_id: 8
   },
   {
     id: 14,
@@ -140,7 +142,11 @@ type MouseCoordinates = {
   y: number
 }
 
+const draggingStore = useDraggingStore()
+
 const { x, y } = useMouse()
+
+const draggingTask = ref<Task | undefined>()
 
 const mouseCoordinates = computed<MouseCoordinates>(() => {
   return {
@@ -149,6 +155,11 @@ const mouseCoordinates = computed<MouseCoordinates>(() => {
   }
 })
 
+// watch(
+//   () => draggingStore.get,
+//   (task) => (draggingTask.value = task)
+// )
+//
 function listTasks(listId: number): Task[] {
   return tasks.value.filter((t) => t.list_id == listId)
 }
@@ -169,6 +180,14 @@ function reorderTasks(reorderedTasks: Task[]): void {
     }
   })
 }
+//
+// function addDraggingTaskToList(listId: number): void {
+//   console.debug(`Mouse entered ${listId} with task ${draggingTask.value?.id}`)
+// }
+//
+// function removeDraggingTaskFromList(listId: number): void {
+//   console.debug(`Mouse leaves ${listId} with task ${draggingTask.value?.id}`)
+// }
 </script>
 
 <template>

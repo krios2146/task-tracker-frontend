@@ -70,24 +70,25 @@ watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
 
 watch(dragging, (dragging) => {
   if (dragging) {
+    console.debug(`Setting dragging task to ${props.task.id}`)
     draggingStore.set(props.task)
   }
   if (!dragging) {
+    console.debug(`Removing dragging task`)
     draggingStore.remove()
   }
 })
 
-watch(
-  [isMouseAboveTask, isMouseBelowTask, dragging],
-  ([isMouseAboveTask, isMouseBelowTask, dragging]) => {
-    if (isMouseAboveTask && !dragging) {
-      emit('mouseAbove', props.task.id)
-    }
-    if (isMouseBelowTask && !dragging) {
-      emit('mouseBelow', props.task.id)
-    }
+watch([isMouseAboveTask, isMouseBelowTask], ([isMouseAboveTask, isMouseBelowTask]) => {
+  if (isMouseAboveTask && draggingStore.get?.id !== props.task.id) {
+    console.debug(`Emitting mouseAbove for task ${props.task.id}`)
+    emit('mouseAbove', props.task.id)
   }
-)
+  if (isMouseBelowTask && draggingStore.get?.id !== props.task.id) {
+    console.debug(`Emitting mouseBelow for task ${props.task.id}`)
+    emit('mouseBelow', props.task.id)
+  }
+})
 </script>
 
 <template>

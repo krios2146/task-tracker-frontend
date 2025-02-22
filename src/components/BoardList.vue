@@ -34,6 +34,7 @@ const draggingTask = ref<Task | undefined>()
 watch(
   props.tasks,
   (tasks) => {
+    console.debug(`List ${props.list.id} updating local tasks from props.tasks`)
     localTasks.value = tasks
   },
   { immediate: true }
@@ -42,6 +43,7 @@ watch(
 watch(
   localTasks.value,
   (localTasks) => {
+    console.debug(`List ${props.list.id} updating sorted tasks from local tasks`)
     sortedTasks.value = sortTasks(localTasks)
   },
   { immediate: true }
@@ -49,10 +51,16 @@ watch(
 
 watch(
   () => draggingStore.get,
-  (task) => (draggingTask.value = task)
+  (task) => {
+    console.debug(`List ${props.list.id} setting local draggingTask to ${task?.id}`)
+    draggingTask.value = task
+  }
 )
-
 function sortTasks(tasks: Task[]): Task[] {
+  console.debug(`List ${props.list.id} start sorting ${tasks.length} tasks`)
+
+  tasks = tasks.filter((task) => task.list_id === props.list.id)
+
   const tasksMap = new Map(tasks.map((task) => [task.id, task]))
 
   const firstTask = tasks.find((task) => {
@@ -78,6 +86,8 @@ function sortTasks(tasks: Task[]): Task[] {
     currentTask = tasksMap.get(currentTask.next_id) || undefined
   }
 
+  console.debug(`Sorted tasks length = ${sortedTasks.length}`)
+
   return sortedTasks
 }
 
@@ -89,9 +99,13 @@ function findTask(taskId: number | undefined): Task | undefined {
 }
 
 function atMouseAbove(taskId: number) {
-  if (draggingTask.value === undefined) {
+  if (draggingTask.value?.list_id !== props.list.id) {
     return
   }
+
+  console.debug(
+    `List ${props.list.id} handling @mouse-above event for task ${taskId} with draggingTask = ${draggingTask.value.id}`
+  )
 
   const reorderedTasks = []
 
@@ -126,13 +140,21 @@ function atMouseAbove(taskId: number) {
 
   reorderedTasks.push(draggingTask.value)
 
+  console.debug(
+    `List ${props.list.id} emitting tasksReordered with following tasks ${JSON.stringify(reorderedTasks)}`
+  )
+
   emit('tasksReordered', reorderedTasks)
 }
 
 function atMouseBelow(taskId: number) {
-  if (draggingTask.value === undefined) {
+  if (draggingTask.value?.list_id !== props.list.id) {
     return
   }
+
+  console.debug(
+    `List ${props.list.id} handling @mouse-below event for task ${taskId} with draggingTask = ${draggingTask.value.id}`
+  )
 
   const reorderedTasks = []
 
