@@ -6,8 +6,12 @@ export const useDraggingStore = defineStore('dragging', () => {
 
   const get = computed(() => task.value)
 
-  const set = (t: Task) => (task.value = t)
-  const remove = () => (task.value = undefined)
+  function set(t: Task) {
+    task.value = t
+  }
+  function remove() {
+    task.value = undefined
+  }
 
   return { task, get, set, remove }
 })

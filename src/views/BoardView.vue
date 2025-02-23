@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import BoardList from '@/components/BoardList.vue'
 import { ref } from 'vue'
-import { useMouse } from '@vueuse/core'
+import { useMouse, useMousePressed } from '@vueuse/core'
 import { computed } from 'vue'
-import { useDraggingStore } from '@/stores/draggingStore'
-import { watch } from 'vue'
+import { provide } from 'vue'
+import type { MousePosition } from '@/types/mousePosition'
 
 interface List {
   id: number
@@ -37,17 +37,17 @@ const lists = ref<List[]>([
 const tasks = ref<Task[]>([
   {
     id: 1,
-    title: 'CI/CD for task-tracker',
+    title: 'Tests for all API methods',
     list_id: 1,
-    next_id: 3,
-    prev_id: 2
+    next_id: 2,
+    prev_id: undefined
   },
   {
     id: 2,
-    title: 'Tests for all API methods',
+    title: 'CI/CD for task-tracker',
     list_id: 1,
-    next_id: 1,
-    prev_id: undefined
+    next_id: 3,
+    prev_id: 1
   },
   {
     id: 3,
@@ -137,32 +137,31 @@ const tasks = ref<Task[]>([
   }
 ])
 
-type MouseCoordinates = {
-  x: number
-  y: number
-}
-
-const draggingStore = useDraggingStore()
-
 const { x, y } = useMouse()
+const { pressed } = useMousePressed()
 
-const draggingTask = ref<Task | undefined>()
-
-const mouseCoordinates = computed<MouseCoordinates>(() => {
+const mouseCoordinates = computed<MousePosition>(() => {
   return {
     x: x.value,
     y: y.value
   }
 })
 
-// watch(
-//   () => draggingStore.get,
-//   (task) => (draggingTask.value = task)
-// )
-//
-function listTasks(listId: number): Task[] {
-  return tasks.value.filter((t) => t.list_id == listId)
-}
+provide('mousePosition', mouseCoordinates)
+provide('mousePressed', pressed)
+
+const tasksForList = computed<Map<number, Task[]>>(() => {
+  const tasksForList = new Map()
+
+  lists.value.forEach((list) => {
+    const listTasks = tasks.value.filter((task) => task.list_id === list.id)
+    tasksForList.set(list.id, listTasks)
+  })
+
+  console.debug(`tasksForList update ${JSON.stringify(tasksForList)}`)
+
+  return tasksForList
+})
 
 function reorderTasks(reorderedTasks: Task[]): void {
   const hasBeenReordered = (task: Task) =>
@@ -177,17 +176,10 @@ function reorderTasks(reorderedTasks: Task[]): void {
 
       task.next_id = reorderedTask.next_id
       task.prev_id = reorderedTask.prev_id
+      task.list_id = reorderedTask.list_id
     }
   })
 }
-//
-// function addDraggingTaskToList(listId: number): void {
-//   console.debug(`Mouse entered ${listId} with task ${draggingTask.value?.id}`)
-// }
-//
-// function removeDraggingTaskFromList(listId: number): void {
-//   console.debug(`Mouse leaves ${listId} with task ${draggingTask.value?.id}`)
-// }
 </script>
 
 <template>
@@ -196,7 +188,7 @@ function reorderTasks(reorderedTasks: Task[]): void {
       <BoardList
         v-for="list in lists"
         :key="list.id"
-        :tasks="listTasks(list.id)"
+        :tasks="tasksForList.get(list.id) || []"
         :list="list"
         :mouse-coordinates="mouseCoordinates"
         @tasks-reordered="reorderTasks"

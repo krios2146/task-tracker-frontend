@@ -1,92 +1,59 @@
 <script setup lang="ts">
-import { useMouseInElement, useMousePressed } from '@vueuse/core'
+import { useMouseInElement } from '@vueuse/core'
 import { watch } from 'vue'
 import { computed, ref } from 'vue'
 import { useTemplateRef } from 'vue'
 import { useDraggingStore } from '@/stores/draggingStore'
+import { inject } from 'vue'
+import type { MousePosition } from '@/types/mousePosition'
+import type { Ref } from 'vue'
 
-type MouseCoordinates = {
-  x: number
-  y: number
-}
+const props = defineProps<{ task: Task }>()
 
-const props = defineProps<{
-  mouseCoordinates: MouseCoordinates
-  task: Task
-}>()
-const emit = defineEmits<{
-  mouseAbove: [taskId: number]
-  mouseBelow: [taskId: number]
-}>()
-
-const taskElement = useTemplateRef('task')
-
-const { elementPositionY, elementHeight, elementX, elementY, isOutside } =
-  useMouseInElement(taskElement)
-const { pressed } = useMousePressed({ target: taskElement })
+const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
+const mousePressed = inject<Ref<boolean>>('mousePressed')!
 
 const draggingStore = useDraggingStore()
+const { elementX, elementY, isOutside } = useMouseInElement(useTemplateRef('task'))
 
 const dragging = ref(false)
 
 const elementOffsetX = ref(0)
 const elementOffsetY = ref(0)
 
-const elementAbsoluteX = computed(() => props.mouseCoordinates.x - elementOffsetX.value)
-const elementAbsoluteY = computed(() => props.mouseCoordinates.y - elementOffsetY.value)
+const elementAbsoluteX = computed(() => mousePosition.value.x - elementOffsetX.value)
+const elementAbsoluteY = computed(() => mousePosition.value.y - elementOffsetY.value)
 
-const elementHorizontalBreakpoint = computed(() => elementPositionY.value + elementHeight.value / 2)
+const draggingTask = computed(() => draggingStore.get)
 
-const isMouseAboveTask = computed(() => {
-  if (isOutside.value) {
-    return false
+const mouseOnTask = computed(() => !isOutside.value)
+
+watch(mousePressed, (mousePressed) => {
+  if (mousePressed) {
+    elementOffsetX.value = elementX.value
+    elementOffsetY.value = elementY.value
   }
-  return props.mouseCoordinates.y < elementHorizontalBreakpoint.value
-})
-const isMouseBelowTask = computed(() => {
-  if (isOutside.value) {
-    return false
-  }
-  return props.mouseCoordinates.y > elementHorizontalBreakpoint.value
 })
 
-watch(pressed, (mousePressed) => {
-  if (!mousePressed) {
+watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask]) => {
+  if (mouseOnTask && mousePressed && draggingTask.value === undefined) {
+    draggingStore.set(props.task)
     return
   }
-
-  elementOffsetX.value = elementX.value
-  elementOffsetY.value = elementY.value
-})
-
-watch([pressed, isOutside], ([mousePressed, mouseOtusideTask]) => {
-  if (!mouseOtusideTask && mousePressed) {
-    dragging.value = true
-  }
-  if (!mousePressed && dragging) {
-    dragging.value = false
-  }
-})
-
-watch(dragging, (dragging) => {
-  if (dragging) {
-    console.debug(`Setting dragging task to ${props.task.id}`)
-    draggingStore.set(props.task)
-  }
-  if (!dragging) {
-    console.debug(`Removing dragging task`)
+  if (!mousePressed) {
     draggingStore.remove()
+    return
   }
 })
 
-watch([isMouseAboveTask, isMouseBelowTask], ([isMouseAboveTask, isMouseBelowTask]) => {
-  if (isMouseAboveTask && draggingStore.get?.id !== props.task.id) {
-    console.debug(`Emitting mouseAbove for task ${props.task.id}`)
-    emit('mouseAbove', props.task.id)
+watch(draggingTask, (draggingTask) => {
+  if (draggingTask === undefined) {
+    dragging.value = false
+    return
   }
-  if (isMouseBelowTask && draggingStore.get?.id !== props.task.id) {
-    console.debug(`Emitting mouseBelow for task ${props.task.id}`)
-    emit('mouseBelow', props.task.id)
+  if (draggingTask.id === props.task.id) {
+    dragging.value = true
+    return
   }
 })
 </script>

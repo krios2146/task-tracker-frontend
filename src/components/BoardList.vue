@@ -4,6 +4,8 @@ import BoardListAddButton from './BoardListAddButton.vue'
 import { ref } from 'vue'
 import { watch } from 'vue'
 import { useDraggingStore } from '@/stores/draggingStore'
+import { useTemplateRef } from 'vue'
+import { useMouseInElement } from '@vueuse/core'
 
 type MouseCoordinates = {
   x: number
@@ -24,6 +26,10 @@ const emit = defineEmits<{
   tasksReordered: [tasks: Task[]]
 }>()
 
+const listOtletElement = useTemplateRef('list')
+
+const { isOutside } = useMouseInElement(listOtletElement)
+
 const draggingStore = useDraggingStore()
 
 const localTasks = ref<Task[]>([])
@@ -32,7 +38,7 @@ const sortedTasks = ref<Task[]>([])
 const draggingTask = ref<Task | undefined>()
 
 watch(
-  props.tasks,
+  () => props.tasks,
   (tasks) => {
     console.debug(`List ${props.list.id} updating local tasks from props.tasks`)
     localTasks.value = tasks
@@ -41,7 +47,7 @@ watch(
 )
 
 watch(
-  localTasks.value,
+  () => localTasks.value,
   (localTasks) => {
     console.debug(`List ${props.list.id} updating sorted tasks from local tasks`)
     sortedTasks.value = sortTasks(localTasks)
@@ -56,6 +62,7 @@ watch(
     draggingTask.value = task
   }
 )
+
 function sortTasks(tasks: Task[]): Task[] {
   console.debug(`List ${props.list.id} start sorting ${tasks.length} tasks`)
 
@@ -99,7 +106,7 @@ function findTask(taskId: number | undefined): Task | undefined {
 }
 
 function atMouseAbove(taskId: number) {
-  if (draggingTask.value?.list_id !== props.list.id) {
+  if (draggingTask.value === undefined) {
     return
   }
 
@@ -138,7 +145,13 @@ function atMouseAbove(taskId: number) {
 
   draggingTask.value.next_id = taskBelow.id
 
+  if (draggingTask.value.list_id !== props.list.id) {
+    draggingTask.value.list_id = props.list.id
+  }
+
   reorderedTasks.push(draggingTask.value)
+
+  draggingStore.set(draggingTask.value)
 
   console.debug(
     `List ${props.list.id} emitting tasksReordered with following tasks ${JSON.stringify(reorderedTasks)}`
@@ -148,7 +161,7 @@ function atMouseAbove(taskId: number) {
 }
 
 function atMouseBelow(taskId: number) {
-  if (draggingTask.value?.list_id !== props.list.id) {
+  if (draggingTask.value === undefined) {
     return
   }
 
@@ -187,15 +200,21 @@ function atMouseBelow(taskId: number) {
 
   draggingTask.value.prev_id = taskAbove.id
 
+  if (draggingTask.value.list_id !== props.list.id) {
+    draggingTask.value.list_id = props.list.id
+  }
+
   reorderedTasks.push(draggingTask.value)
+
+  draggingStore.set(draggingTask.value)
 
   emit('tasksReordered', reorderedTasks)
 }
 </script>
 
 <template>
-  <div class="min-w-2xs max-w-2xs">
-    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full" ref="list">
+  <div class="min-w-2xs max-w-2xs" ref="list">
+    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full">
       <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
 
       <div class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden">
