@@ -113,6 +113,17 @@ watch([taskAboveId, taskBelowId], ([taskAboveId, taskBelowId]) => {
   atMouseBelow(taskBelowId)
 })
 
+watch(
+  () => dragAndDropStore.taskToExclude,
+  (taskToExclude) => {
+    if (taskToExclude === undefined || !isFromThisList(taskToExclude)) {
+      return
+    }
+    excludeTask(taskToExclude)
+    dragAndDropStore.taskExcluded()
+  }
+)
+
 tryOnMounted(() => {
   localTasks.value = props.tasks
   sortedTasks.value = sortTasks(props.tasks)
@@ -196,6 +207,10 @@ function atMouseBelow(taskId: number | undefined): void {
   reorderTasks(targetNextTask, targetPrevTask)
 }
 
+function isFromThisList(task: Task): boolean {
+  return task.list_id === props.list.id
+}
+
 function reorderTasks(targetNextTask: Task | undefined, targetPrevTask: Task | undefined): void {
   if (!isDragging.value) {
     return
@@ -213,6 +228,10 @@ function reorderTasks(targetNextTask: Task | undefined, targetPrevTask: Task | u
   }
   if (targetPrevTask?.id === targetTask.id) {
     return
+  }
+
+  if (!isFromThisList(targetTask)) {
+    dragAndDropStore.setTaskFromAnotherList(targetTask)
   }
 
   // Updating links of tasks from which the dragged task was removed
@@ -238,11 +257,34 @@ function reorderTasks(targetNextTask: Task | undefined, targetPrevTask: Task | u
   targetTask.prev_id = targetPrevTask?.id
   targetTask.next_id = targetNextTask?.id
 
+  if (!isFromThisList(targetTask)) {
+    targetTask.list_id = props.list.id
+  }
+
   reorderedTasks.add(targetTask)
 
-  dragAndDropStore.setDraggingTask(targetTask)
-
   emit('tasksReordered', [...reorderedTasks])
+
+  dragAndDropStore.setDraggingTask(targetTask)
+  dragAndDropStore.triggerAnotherListTaskExclusion()
+}
+
+function excludeTask(task: Task): void {
+  const prevTask = findTask(task.prev_id)
+  const nextTask = findTask(task.next_id)
+
+  const reorderedTasks = []
+
+  if (prevTask !== undefined) {
+    prevTask.next_id = task.next_id
+    reorderedTasks.push(prevTask)
+  }
+  if (nextTask !== undefined) {
+    nextTask.prev_id = task.prev_id
+    reorderedTasks.push(nextTask)
+  }
+
+  emit('tasksReordered', reorderedTasks)
 }
 </script>
 
