@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import BoardListTask from './BoardListTask.vue'
 import BoardListAddButton from './BoardListAddButton.vue'
-import { ref } from 'vue'
-import { watch } from 'vue'
+import { ref, type Ref, watch, inject } from 'vue'
 import { useDraggingStore } from '@/stores/draggingStore'
+import { useTemplateRefsList, useElementBounding } from '@vueuse/core'
+import type { MousePosition } from '@/types/mousePosition'
 import { useTemplateRef } from 'vue'
-import { useMouseInElement } from '@vueuse/core'
+import { computed } from 'vue'
 
-type MouseCoordinates = {
-  x: number
-  y: number
+type ElementBoundaries = {
+  top: number
+  bot: number
+  right: number
+  left: number
 }
 
-interface List {
+type TaskBoundaries = {
+  taskId: number
+  boundaries: ElementBoundaries
+}
+
+type List = {
   id: number
   name: string
 }
@@ -20,15 +28,16 @@ interface List {
 const props = defineProps<{
   tasks: Task[]
   list: List
-  mouseCoordinates: MouseCoordinates
 }>()
 const emit = defineEmits<{
   tasksReordered: [tasks: Task[]]
 }>()
 
-const listOtletElement = useTemplateRef('list')
+const listContainerElement = useTemplateRef<HTMLDivElement>('list-container')
 
-const { isOutside } = useMouseInElement(listOtletElement)
+const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
+
+const taskElements = useTemplateRefsList<HTMLDivElement>()
 
 const draggingStore = useDraggingStore()
 
@@ -37,31 +46,125 @@ const sortedTasks = ref<Task[]>([])
 
 const draggingTask = ref<Task | undefined>()
 
+const taskBoundaries = ref<TaskBoundaries[]>()
+
+const taskAbove = ref<number>()
+const taskBelow = ref<number>()
+
+const listContainerBoundaries = computed<ElementBoundaries>(() => {
+  const { top, bottom, right, left } = useElementBounding(listContainerElement)
+  return { top: top.value, bot: bottom.value, right: right.value, left: left.value }
+})
+
 watch(
-  () => props.tasks,
-  (tasks) => {
-    console.debug(`List ${props.list.id} updating local tasks from props.tasks`)
-    localTasks.value = tasks
+  () => taskElements.value,
+  (taskElements) => {
+    const boundaries = calculateTasksBoundaries(taskElements)
+
+    console.debug(`Task boundaries: ${JSON.stringify(boundaries)}`)
+
+    taskBoundaries.value = boundaries
   },
-  { immediate: true }
+  { deep: true }
 )
 
 watch(
-  () => localTasks.value,
-  (localTasks) => {
-    console.debug(`List ${props.list.id} updating sorted tasks from local tasks`)
-    sortedTasks.value = sortTasks(localTasks)
+  () => props.tasks,
+  (tasks) => {
+    console.debug(`List ${props.list.id} updating local tasks from props tasks`)
+    localTasks.value = tasks
   },
-  { immediate: true }
+  { immediate: true, deep: true }
+)
+
+watch(
+  () => props.tasks,
+  (tasks) => {
+    console.debug(`List ${props.list.id} updating sorted tasks from props tasks`)
+    sortedTasks.value = sortTasks(tasks)
+  },
+  { immediate: true, deep: true }
 )
 
 watch(
   () => draggingStore.get,
   (task) => {
-    console.debug(`List ${props.list.id} setting local draggingTask to ${task?.id}`)
+    // console.debug(`List ${props.list.id} setting local draggingTask to ${task?.id}`)
     draggingTask.value = task
   }
 )
+
+watch(
+  () => mousePosition.value,
+  (mousePosition) => {
+    if (draggingTask.value === undefined) {
+      return
+    }
+
+    // Outside current list
+    if (
+      mousePosition.x < listContainerBoundaries.value.left ||
+      mousePosition.x > listContainerBoundaries.value.right
+    ) {
+      return
+    }
+
+    taskBoundaries.value?.forEach((taskBoundary) => {
+      if (taskBoundary.taskId === draggingTask.value?.id) {
+        return
+      }
+
+      const top = taskBoundary.boundaries.top
+      const middle = middleOf(taskBoundary)
+      const bot = taskBoundary.boundaries.bot
+
+      if (mousePosition.y > top && mousePosition.y < middle) {
+        // console.debug(`middle: ${middle} > Mouse y: ${mousePosition.y} > top: ${top}`)
+        taskAbove.value = taskBoundary.taskId
+      }
+      if (mousePosition.y > middle && mousePosition.y < bot) {
+        // console.debug(`bot: ${bot} > Mouse y: ${mousePosition.y} > middle: ${middle}`)
+        taskBelow.value = taskBoundary.taskId
+      }
+    })
+  }
+)
+
+watch(taskAbove, (taskAbove) => {
+  if (taskAbove !== undefined) {
+    atMouseAbove(taskAbove)
+    taskBelow.value = undefined
+  }
+})
+watch(taskBelow, (taskBelow) => {
+  if (taskBelow !== undefined) {
+    atMouseBelow(taskBelow)
+    taskAbove.value = undefined
+  }
+})
+
+function middleOf(task: TaskBoundaries): number {
+  const height = Math.abs(task.boundaries.top - task.boundaries.bot)
+  const middle = task.boundaries.top + height / 2
+
+  return middle
+}
+
+function calculateTasksBoundaries(taskElements: HTMLDivElement[]): TaskBoundaries[] {
+  return taskElements.map((taskElement) => {
+    const taskId = Number(taskElement.dataset.id)
+
+    const { top, bottom, right, left } = useElementBounding(taskElement)
+    const boundaries: ElementBoundaries = {
+      top: top.value,
+      bot: bottom.value,
+      right: right.value,
+      left: left.value
+    }
+
+    return { taskId: taskId, boundaries: boundaries }
+  })
+}
 
 function sortTasks(tasks: Task[]): Task[] {
   console.debug(`List ${props.list.id} start sorting ${tasks.length} tasks`)
@@ -111,43 +214,58 @@ function atMouseAbove(taskId: number) {
   }
 
   console.debug(
-    `List ${props.list.id} handling @mouse-above event for task ${taskId} with draggingTask = ${draggingTask.value.id}`
+    `List ${props.list.id} handling mouse above for task ${taskId} with draggingTask = ${draggingTask.value.id}`
   )
 
   const reorderedTasks = []
 
-  const aboveDraggingTask = findTask(draggingTask.value.prev_id)
-  const belowDraggingTask = findTask(draggingTask.value.next_id)
+  const originPrevTask = findTask(draggingTask.value.prev_id)
+  const originNextTask = findTask(draggingTask.value.next_id)
 
-  if (aboveDraggingTask !== undefined) {
-    aboveDraggingTask.next_id = belowDraggingTask?.id
-    reorderedTasks.push(aboveDraggingTask)
+  const targetNextTask = findTask(taskId)
+  const targetPrevTask = findTask(targetNextTask?.prev_id)
+
+  // console.debug(`Origin prev task: ${JSON.stringify(originPrevTask)}`)
+  // console.debug(`Origin next task: ${JSON.stringify(originNextTask)}`)
+  //
+  // console.debug(`Target prev task: ${JSON.stringify(targetPrevTask)}`)
+  // console.debug(`Target next task: ${JSON.stringify(targetNextTask)}`)
+
+  if (targetNextTask?.id === draggingTask.value.id) {
+    // console.debug(`Target next task ${targetNextTask.id} == dragging task, will not proceed`)
+    return
   }
-  if (belowDraggingTask !== undefined) {
-    belowDraggingTask.prev_id = aboveDraggingTask?.id
-    reorderedTasks.push(belowDraggingTask)
-  }
-
-  const taskBelow = findTask(taskId)!
-  const taskAbove = findTask(taskBelow.prev_id)
-
-  if (taskAbove === undefined) {
-    draggingTask.value.prev_id = taskBelow.prev_id
-  }
-
-  taskBelow.prev_id = draggingTask.value.id
-
-  if (taskAbove !== undefined && taskAbove.id !== draggingTask.value.id) {
-    taskAbove.next_id = draggingTask.value.id
-    draggingTask.value.prev_id = taskAbove.id
-    reorderedTasks.push(taskAbove)
+  if (targetPrevTask?.id === draggingTask.value.id) {
+    // console.debug(`Target prev task ${targetPrevTask.id} == dragging task, will not proceed`)
+    return
   }
 
-  draggingTask.value.next_id = taskBelow.id
-
-  if (draggingTask.value.list_id !== props.list.id) {
-    draggingTask.value.list_id = props.list.id
+  if (originPrevTask !== undefined) {
+    originPrevTask.next_id = draggingTask.value.next_id
+    // console.debug(`Updated origin prev task: ${JSON.stringify(originPrevTask)}`)
+    reorderedTasks.push(originPrevTask)
   }
+  if (originNextTask !== undefined) {
+    originNextTask.prev_id = draggingTask.value.prev_id
+    // console.debug(`Updated origin next task: ${JSON.stringify(originNextTask)}`)
+    reorderedTasks.push(originNextTask)
+  }
+
+  if (targetNextTask !== undefined) {
+    targetNextTask.prev_id = draggingTask.value.id
+    // console.debug(`Updated target next task: ${JSON.stringify(targetNextTask)}`)
+    reorderedTasks.push(targetNextTask)
+  }
+  if (targetPrevTask !== undefined) {
+    targetPrevTask.next_id = draggingTask.value.id
+    // console.debug(`Updated target prev task: ${JSON.stringify(targetPrevTask)}`)
+    reorderedTasks.push(targetPrevTask)
+  }
+
+  draggingTask.value.prev_id = targetPrevTask?.id
+  draggingTask.value.next_id = targetNextTask?.id
+
+  // console.debug(`Updated dragging task: ${JSON.stringify(draggingTask.value)}`)
 
   reorderedTasks.push(draggingTask.value)
 
@@ -166,70 +284,89 @@ function atMouseBelow(taskId: number) {
   }
 
   console.debug(
-    `List ${props.list.id} handling @mouse-below event for task ${taskId} with draggingTask = ${draggingTask.value.id}`
+    `List ${props.list.id} handling mouse below for task ${taskId} with draggingTask = ${draggingTask.value.id}`
   )
 
   const reorderedTasks = []
 
-  const aboveDraggingTask = findTask(draggingTask.value.prev_id)
-  const belowDraggingTask = findTask(draggingTask.value.next_id)
+  const originPrevTask = findTask(draggingTask.value.prev_id)
+  const originNextTask = findTask(draggingTask.value.next_id)
 
-  if (aboveDraggingTask !== undefined) {
-    aboveDraggingTask.next_id = belowDraggingTask?.id
-    reorderedTasks.push(aboveDraggingTask)
+  const targetPrevTask = findTask(taskId)
+  const targetNextTask = findTask(targetPrevTask?.next_id)
+
+  // console.debug(`Origin prev task: ${JSON.stringify(originPrevTask)}`)
+  // console.debug(`Origin next task: ${JSON.stringify(originNextTask)}`)
+  //
+  // console.debug(`Target prev task: ${JSON.stringify(targetPrevTask)}`)
+  // console.debug(`Target next task: ${JSON.stringify(targetNextTask)}`)
+
+  if (targetNextTask?.id === draggingTask.value.id) {
+    // console.debug(`Target next task ${targetNextTask.id} == dragging task, will not proceed`)
+    return
   }
-  if (belowDraggingTask !== undefined) {
-    belowDraggingTask.prev_id = aboveDraggingTask?.id
-    reorderedTasks.push(belowDraggingTask)
-  }
-
-  const taskAbove = findTask(taskId)!
-  const taskBelow = findTask(taskAbove.next_id)
-
-  if (taskBelow === undefined) {
-    draggingTask.value.next_id = taskAbove.next_id
-  }
-
-  taskAbove.next_id = draggingTask.value.id
-
-  if (taskBelow !== undefined && taskBelow.id !== draggingTask.value.id) {
-    taskBelow.prev_id = draggingTask.value.id
-    draggingTask.value.next_id = taskBelow.id
-    reorderedTasks.push(taskBelow)
+  if (targetPrevTask?.id === draggingTask.value.id) {
+    // console.debug(`Target prev task ${targetPrevTask.id} == dragging task, will not proceed`)
+    return
   }
 
-  draggingTask.value.prev_id = taskAbove.id
-
-  if (draggingTask.value.list_id !== props.list.id) {
-    draggingTask.value.list_id = props.list.id
+  if (originPrevTask !== undefined) {
+    originPrevTask.next_id = draggingTask.value.next_id
+    // console.debug(`Updated origin prev task: ${JSON.stringify(originPrevTask)}`)
+    reorderedTasks.push(originPrevTask)
   }
+  if (originNextTask !== undefined) {
+    originNextTask.prev_id = draggingTask.value.prev_id
+    // console.debug(`Updated origin next task: ${JSON.stringify(originNextTask)}`)
+    reorderedTasks.push(originNextTask)
+  }
+
+  if (targetNextTask !== undefined) {
+    targetNextTask.prev_id = draggingTask.value.id
+    // console.debug(`Updated target next task: ${JSON.stringify(targetNextTask)}`)
+    reorderedTasks.push(targetNextTask)
+  }
+  if (targetPrevTask !== undefined) {
+    targetPrevTask.next_id = draggingTask.value.id
+    // console.debug(`Updated target prev task: ${JSON.stringify(targetPrevTask)}`)
+    reorderedTasks.push(targetPrevTask)
+  }
+
+  draggingTask.value.prev_id = targetPrevTask?.id
+  draggingTask.value.next_id = targetNextTask?.id
+
+  // console.debug(`Updated dragging task: ${JSON.stringify(draggingTask.value)}`)
 
   reorderedTasks.push(draggingTask.value)
 
   draggingStore.set(draggingTask.value)
 
+  console.debug(
+    `List ${props.list.id} emitting tasksReordered with following tasks ${JSON.stringify(reorderedTasks)}`
+  )
+
+  taskBelow.value = undefined
+  taskAbove.value = undefined
   emit('tasksReordered', reorderedTasks)
 }
 </script>
 
 <template>
-  <div class="min-w-2xs max-w-2xs" ref="list">
+  <div class="min-w-2xs max-w-2xs" ref="list-container">
     <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full">
       <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
 
       <div class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden">
-        <BoardListTask
-          v-for="task in sortedTasks"
-          :key="task.id"
-          :data-id="task.id"
-          :task="task"
-          :mouse-coordinates="mouseCoordinates"
-          @mouse-above="atMouseAbove"
-          @mouse-below="atMouseBelow"
-        />
+        <div v-for="task in sortedTasks" :key="task.id" :data-id="task.id" :ref="taskElements.set">
+          <BoardListTask :task="task" />
+        </div>
       </div>
 
       <BoardListAddButton />
     </div>
+  </div>
+  <div class="fixed right-5 top-15 bg-black text-white py-1 px-2 rounded-md flex flex-col">
+    <div :class="{ hidden: !taskAbove }">aboveTask: {{ taskAbove }}</div>
+    <div :class="{ hidden: !taskBelow }">belowTask: {{ taskBelow }}</div>
   </div>
 </template>

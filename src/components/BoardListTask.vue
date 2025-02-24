@@ -60,7 +60,6 @@ watch(draggingTask, (draggingTask) => {
 
 <template>
   <div
-    v-bind="$attrs"
     ref="task"
     :class="{ 'rotate-3 absolute dragging-card-w': dragging }"
     :style="dragging ? { top: elementAbsoluteY + 'px', left: elementAbsoluteX + 'px' } : {}"

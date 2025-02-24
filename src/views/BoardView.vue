@@ -5,6 +5,7 @@ import { useMouse, useMousePressed } from '@vueuse/core'
 import { computed } from 'vue'
 import { provide } from 'vue'
 import type { MousePosition } from '@/types/mousePosition'
+import { watch } from 'vue'
 
 interface List {
   id: number
@@ -150,30 +151,24 @@ const mouseCoordinates = computed<MousePosition>(() => {
 provide('mousePosition', mouseCoordinates)
 provide('mousePressed', pressed)
 
-const tasksForList = computed<Map<number, Task[]>>(() => {
-  const tasksForList = new Map()
+const tasksForList = ref<Map<number, Task[]>>(new Map<number, Task[]>())
 
-  lists.value.forEach((list) => {
-    const listTasks = tasks.value.filter((task) => task.list_id === list.id)
-    tasksForList.set(list.id, listTasks)
-  })
-
-  console.debug(`tasksForList update ${JSON.stringify(tasksForList)}`)
-
-  return tasksForList
-})
+watch(
+  () => tasks.value,
+  (tasks) => {
+    lists.value.forEach((list) => {
+      const listTasks = tasks.filter((task) => task.list_id === list.id)
+      tasksForList.value.set(list.id, listTasks)
+    })
+  },
+  { immediate: true, deep: true }
+)
 
 function reorderTasks(reorderedTasks: Task[]): void {
-  const hasBeenReordered = (task: Task) =>
-    reorderedTasks.some((reorderedTask) => reorderedTask.id == task.id)
-
-  const findReorderedTask = (task: Task) =>
-    reorderedTasks.find((reorderedTask) => reorderedTask.id == task.id)
-
   tasks.value.forEach((task) => {
-    if (hasBeenReordered(task)) {
-      const reorderedTask = findReorderedTask(task)!
+    const reorderedTask = reorderedTasks.find((reorderedTask) => reorderedTask.id == task.id)
 
+    if (reorderedTask !== undefined) {
       task.next_id = reorderedTask.next_id
       task.prev_id = reorderedTask.prev_id
       task.list_id = reorderedTask.list_id
@@ -183,16 +178,18 @@ function reorderTasks(reorderedTasks: Task[]): void {
 </script>
 
 <template>
-  <div class="p-3 h-screen">
+  <div class="p-3 h-screen relative">
     <div class="flex flex-row gap-4 justify-start max-h-full min-h-full">
       <BoardList
         v-for="list in lists"
         :key="list.id"
         :tasks="tasksForList.get(list.id) || []"
         :list="list"
-        :mouse-coordinates="mouseCoordinates"
         @tasks-reordered="reorderTasks"
       />
+    </div>
+    <div class="fixed top-0 right-0 bg-black text-white py-1 px-2 rounded-md m-3">
+      x: {{ mouseCoordinates.x }} y: {{ mouseCoordinates.y }}
     </div>
   </div>
 </template>
