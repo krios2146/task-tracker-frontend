@@ -3,7 +3,7 @@ import { useMouseInElement } from '@vueuse/core'
 import { watch } from 'vue'
 import { computed, ref } from 'vue'
 import { useTemplateRef } from 'vue'
-import { useDraggingStore } from '@/stores/draggingStore'
+import { useDragAndDropStore } from '@/stores/dragAndDropStore'
 import { inject } from 'vue'
 import type { MousePosition } from '@/types/mousePosition'
 import type { Ref } from 'vue'
@@ -13,7 +13,7 @@ const props = defineProps<{ task: Task }>()
 const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
 const mousePressed = inject<Ref<boolean>>('mousePressed')!
 
-const draggingStore = useDraggingStore()
+const dragAndDropStore = useDragAndDropStore()
 const { elementX, elementY, isOutside } = useMouseInElement(useTemplateRef('task'))
 
 const dragging = ref(false)
@@ -24,7 +24,7 @@ const elementOffsetY = ref(0)
 const elementAbsoluteX = computed(() => mousePosition.value.x - elementOffsetX.value)
 const elementAbsoluteY = computed(() => mousePosition.value.y - elementOffsetY.value)
 
-const draggingTask = computed(() => draggingStore.get)
+const draggingTask = computed(() => dragAndDropStore.getDraggingTask)
 
 const mouseOnTask = computed(() => !isOutside.value)
 
@@ -37,11 +37,11 @@ watch(mousePressed, (mousePressed) => {
 
 watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask]) => {
   if (mouseOnTask && mousePressed && draggingTask.value === undefined) {
-    draggingStore.set(props.task)
+    dragAndDropStore.setDraggingTask(props.task)
     return
   }
   if (!mousePressed) {
-    draggingStore.remove()
+    dragAndDropStore.removeDraggingTask()
     return
   }
 })

@@ -9,7 +9,7 @@ import {
   watchDeep,
   tryOnMounted
 } from '@vueuse/core'
-import { useDraggingStore } from '@/stores/draggingStore'
+import { useDragAndDropStore } from '@/stores/dragAndDropStore'
 import type { MousePosition } from '@/types/mousePosition'
 
 type ElementBoundaries = {
@@ -41,6 +41,8 @@ const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
 const taskElements = useTemplateRefsList<HTMLDivElement>()
 const listContainerElement = useTemplateRef<HTMLDivElement>('list-container')
 
+const dragAndDropStore = useDragAndDropStore()
+
 const localTasks = ref<Task[]>([])
 const sortedTasks = ref<Task[]>([])
 
@@ -49,7 +51,7 @@ const taskBoundaries = ref<TaskBoundaries[]>()
 const taskAboveId = refAutoReset<number | undefined>(undefined, 100)
 const taskBelowId = refAutoReset<number | undefined>(undefined, 100)
 
-const draggingTask = computed<Task | undefined>(() => useDraggingStore().get)
+const draggingTask = computed<Task | undefined>(() => dragAndDropStore.getDraggingTask)
 const isDragging = computed<boolean>(() => draggingTask.value !== undefined)
 
 const listContainerBoundaries = computed<ElementBoundaries>(() => {
@@ -238,7 +240,7 @@ function reorderTasks(targetNextTask: Task | undefined, targetPrevTask: Task | u
 
   reorderedTasks.add(targetTask)
 
-  useDraggingStore().set(targetTask)
+  dragAndDropStore.setDraggingTask(targetTask)
 
   emit('tasksReordered', [...reorderedTasks])
 }
