@@ -89,9 +89,14 @@ watch(
       return
     }
 
-    taskBoundaries.value?.forEach((taskBoundary) => {
+    if (taskBoundaries.value === undefined || props.tasks.length === 0) {
+      atMouseInEmptyList()
+      return
+    }
+
+    for (const taskBoundary of taskBoundaries.value) {
       if (taskBoundary.taskId === draggingTask.value?.id) {
-        return
+        continue
       }
 
       const top = taskBoundary.top
@@ -100,11 +105,13 @@ watch(
 
       if (mousePosition.y > top && mousePosition.y < middle) {
         taskAboveId.value = taskBoundary.taskId
+        return
       }
       if (mousePosition.y > middle && mousePosition.y < bot) {
         taskBelowId.value = taskBoundary.taskId
+        return
       }
-    })
+    }
   }
 )
 
@@ -205,6 +212,10 @@ function atMouseBelow(taskId: number | undefined): void {
   const targetNextTask = findTask(targetPrevTask?.next_id)
 
   reorderTasks(targetNextTask, targetPrevTask)
+}
+
+function atMouseInEmptyList(): void {
+  reorderTasks(undefined, undefined)
 }
 
 function isFromThisList(task: Task): boolean {
