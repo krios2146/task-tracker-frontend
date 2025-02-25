@@ -40,6 +40,7 @@ const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
 
 const taskElements = useTemplateRefsList<HTMLDivElement>()
 const listContainerElement = useTemplateRef<HTMLDivElement>('list-container')
+const tasksContainerElement = useTemplateRef<HTMLDivElement>('tasks-container')
 
 const dragAndDropStore = useDragAndDropStore()
 
@@ -58,6 +59,10 @@ const listContainerBoundaries = computed<ElementBoundaries>(() => {
   const { top, bottom, right, left } = useElementBounding(listContainerElement)
   return { top: top.value, bot: bottom.value, right: right.value, left: left.value }
 })
+const tasksContainerBoundaries = computed<ElementBoundaries>(() => {
+  const { top, bottom, right, left } = useElementBounding(tasksContainerElement)
+  return { top: top.value, bot: bottom.value, right: right.value, left: left.value }
+})
 
 const isMouseInsideList = computed<boolean>(() => {
   if (mousePosition.value.x < listContainerBoundaries.value.left) {
@@ -67,6 +72,31 @@ const isMouseInsideList = computed<boolean>(() => {
     return false
   }
   return true
+})
+
+const isMouseAboveTasks = computed<boolean>(() => {
+  if (mousePosition.value.x < tasksContainerBoundaries.value.left) {
+    return false
+  }
+  if (mousePosition.value.x > tasksContainerBoundaries.value.right) {
+    return false
+  }
+  if (mousePosition.value.y < tasksContainerBoundaries.value.top) {
+    return true
+  }
+  return false
+})
+const isMouseBelowTasks = computed<boolean>(() => {
+  if (mousePosition.value.x < tasksContainerBoundaries.value.left) {
+    return false
+  }
+  if (mousePosition.value.x > tasksContainerBoundaries.value.right) {
+    return false
+  }
+  if (mousePosition.value.y > tasksContainerBoundaries.value.bot) {
+    return true
+  }
+  return false
 })
 
 watchDeep(
@@ -111,6 +141,13 @@ watch(
         taskBelowId.value = taskBoundary.taskId
         return
       }
+    }
+
+    if (isMouseAboveTasks.value) {
+      atMouseAboveTasksArea()
+    }
+    if (isMouseBelowTasks.value) {
+      atMouseBelowTasksArea()
     }
   }
 )
@@ -218,6 +255,18 @@ function atMouseInEmptyList(): void {
   reorderTasks(undefined, undefined)
 }
 
+function atMouseBelowTasksArea(): void {
+  const targetPrevTask = sortedTasks.value[sortedTasks.value.length - 1]
+
+  reorderTasks(undefined, targetPrevTask)
+}
+
+function atMouseAboveTasksArea(): void {
+  const targetNextTask = sortedTasks.value[0]
+
+  reorderTasks(targetNextTask, undefined)
+}
+
 function isFromThisList(task: Task): boolean {
   return task.list_id === props.list.id
 }
@@ -304,7 +353,10 @@ function excludeTask(task: Task): void {
     <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full">
       <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
 
-      <div class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden">
+      <div
+        class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden"
+        ref="tasks-container"
+      >
         <div v-for="task in sortedTasks" :key="task.id" :data-id="task.id" :ref="taskElements.set">
           <BoardListTask :task="task" />
         </div>
