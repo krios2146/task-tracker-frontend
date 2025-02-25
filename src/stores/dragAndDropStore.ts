@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 
 export const useDragAndDropStore = defineStore('dragAndDrop', () => {
   const draggingTask = ref<Task | undefined>()
+  const draggingTaskOffsetX = ref<number | undefined>()
+  const draggingTaskOffsetY = ref<number | undefined>()
   const taskOfAnotherList = ref<Task | undefined>()
   const needToExclude = ref<boolean>(false)
 
@@ -10,9 +12,15 @@ export const useDragAndDropStore = defineStore('dragAndDrop', () => {
   const taskToExclude = computed<Task | undefined>(() =>
     needToExclude.value ? taskOfAnotherList.value : undefined
   )
+  const getDraggingTaskOffsetX = computed<number | undefined>(() => draggingTaskOffsetX.value)
+  const getDraggingTaskOffsetY = computed<number | undefined>(() => draggingTaskOffsetY.value)
 
   function setDraggingTask(task: Task): void {
     draggingTask.value = { ...task }
+  }
+  function setDraggingTaskOffsets(x: number, y: number): void {
+    draggingTaskOffsetX.value = x
+    draggingTaskOffsetY.value = y
   }
   function removeDraggingTask(): void {
     draggingTask.value = undefined
@@ -32,11 +40,16 @@ export const useDragAndDropStore = defineStore('dragAndDrop', () => {
 
   return {
     draggingTask,
+    draggingTaskOffsetX,
+    draggingTaskOffsetY,
     taskOfAnotherList,
     needToExclude,
     getDraggingTask,
     taskToExclude,
+    getDraggingTaskOffsetX,
+    getDraggingTaskOffsetY,
     setDraggingTask,
+    setDraggingTaskOffsets,
     removeDraggingTask,
     setTaskFromAnotherList,
     triggerAnotherListTaskExclusion,

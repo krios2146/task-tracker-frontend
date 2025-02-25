@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { useMouseInElement } from '@vueuse/core'
-import { watch } from 'vue'
-import { computed, ref } from 'vue'
-import { useTemplateRef } from 'vue'
+import { watch, computed, useTemplateRef, inject, type Ref } from 'vue'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
-import { inject } from 'vue'
 import type { MousePosition } from '@/types/mousePosition'
-import type { Ref } from 'vue'
 
 const props = defineProps<{ task: Task }>()
 
@@ -16,43 +12,26 @@ const mousePressed = inject<Ref<boolean>>('mousePressed')!
 const dragAndDropStore = useDragAndDropStore()
 const { elementX, elementY, isOutside } = useMouseInElement(useTemplateRef('task'))
 
-const dragging = ref(false)
-
-const elementOffsetX = ref(0)
-const elementOffsetY = ref(0)
-
-const elementAbsoluteX = computed(() => mousePosition.value.x - elementOffsetX.value)
-const elementAbsoluteY = computed(() => mousePosition.value.y - elementOffsetY.value)
+const taskAbsoluteX = computed(
+  () => mousePosition.value.x - (dragAndDropStore.getDraggingTaskOffsetX ?? 0)
+)
+const taskAbsoluteY = computed(
+  () => mousePosition.value.y - (dragAndDropStore.getDraggingTaskOffsetY ?? 0)
+)
 
 const draggingTask = computed(() => dragAndDropStore.getDraggingTask)
+const isDragging = computed(() => (draggingTask.value?.id === props.task.id ? true : false))
 
 const mouseOnTask = computed(() => !isOutside.value)
-
-watch(mousePressed, (mousePressed) => {
-  if (mousePressed) {
-    elementOffsetX.value = elementX.value
-    elementOffsetY.value = elementY.value
-  }
-})
 
 watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask]) => {
   if (mouseOnTask && mousePressed && draggingTask.value === undefined) {
     dragAndDropStore.setDraggingTask(props.task)
+    dragAndDropStore.setDraggingTaskOffsets(elementX.value, elementY.value)
     return
   }
   if (!mousePressed) {
     dragAndDropStore.removeDraggingTask()
-    return
-  }
-})
-
-watch(draggingTask, (draggingTask) => {
-  if (draggingTask === undefined) {
-    dragging.value = false
-    return
-  }
-  if (draggingTask.id === props.task.id) {
-    dragging.value = true
     return
   }
 })
@@ -61,14 +40,14 @@ watch(draggingTask, (draggingTask) => {
 <template>
   <div
     ref="task"
-    :class="{ 'rotate-3 absolute dragging-card-w': dragging }"
-    :style="dragging ? { top: elementAbsoluteY + 'px', left: elementAbsoluteX + 'px' } : {}"
+    :class="{ 'rotate-3 absolute dragging-card-w': isDragging }"
+    :style="isDragging ? { top: taskAbsoluteY + 'px', left: taskAbsoluteX + 'px' } : {}"
     class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 hover:ring"
   >
     <p class="text-gray-200 select-none">{{ task.title }}</p>
   </div>
 
-  <div :class="{ hidden: !dragging }" class="p-2 px-3 rounded-md bg-gray-900">
+  <div :class="{ hidden: !isDragging }" class="p-2 px-3 rounded-md bg-gray-900">
     <p class="opacity-0">{{ task.title }}</p>
   </div>
 </template>
