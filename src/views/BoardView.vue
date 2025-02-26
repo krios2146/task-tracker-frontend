@@ -1,37 +1,46 @@
 <script setup lang="ts">
 import BoardList from '@/components/BoardList.vue'
-import { ref } from 'vue'
-import { useMouse, useMousePressed } from '@vueuse/core'
-import { computed } from 'vue'
-import { provide } from 'vue'
+import { ref, computed, provide, watch } from 'vue'
+import { useMouse, useMousePressed, watchDeep } from '@vueuse/core'
 import type { MousePosition } from '@/types/mousePosition'
-import { watch } from 'vue'
 
 interface List {
   id: number
   name: string
+  next_id: number | undefined
+  prev_id: number | undefined
 }
 
 const lists = ref<List[]>([
   {
     id: 1,
-    name: 'Backlog'
+    name: 'Backlog',
+    next_id: 2,
+    prev_id: undefined
   },
   {
     id: 2,
-    name: 'TODO'
+    name: 'TODO',
+    next_id: 3,
+    prev_id: 1
   },
   {
     id: 3,
-    name: 'In Progress'
+    name: 'In Progress',
+    next_id: 4,
+    prev_id: 2
   },
   {
     id: 4,
-    name: 'In Review'
+    name: 'In Review',
+    next_id: 5,
+    prev_id: 3
   },
   {
     id: 5,
-    name: 'Done'
+    name: 'Done',
+    next_id: undefined,
+    prev_id: 4
   }
 ])
 
@@ -41,7 +50,7 @@ const tasks = ref<Task[]>([
     title: 'Tests for all API methods',
     list_id: 1,
     next_id: 2,
-    prev_id: undefined
+    prev_id: 11
   },
   {
     id: 2,
@@ -95,8 +104,8 @@ const tasks = ref<Task[]>([
   {
     id: 9,
     title: 'Drag-n-drop for tasks between lists',
-    list_id: 3,
-    next_id: undefined,
+    list_id: 5,
+    next_id: 12,
     prev_id: undefined
   },
   {
@@ -110,15 +119,15 @@ const tasks = ref<Task[]>([
     id: 11,
     title: 'Lists drag-n-drop',
     list_id: 2,
-    next_id: 12,
+    next_id: undefined,
     prev_id: 10
   },
   {
     id: 12,
     title: 'Respect position of the dropped task in a list',
-    list_id: 2,
+    list_id: 5,
     next_id: undefined,
-    prev_id: 11
+    prev_id: 10
   },
   {
     id: 13,
@@ -152,6 +161,7 @@ provide('mousePosition', mouseCoordinates)
 provide('mousePressed', pressed)
 
 const tasksForList = ref<Map<number, Task[]>>(new Map<number, Task[]>())
+const sortedLists = ref<List[]>(sortLists(lists.value))
 
 watch(
   () => tasks.value,
@@ -162,6 +172,11 @@ watch(
     })
   },
   { immediate: true, deep: true }
+)
+
+watchDeep(
+  () => lists.value,
+  (lists) => (sortedLists.value = sortLists(lists))
 )
 
 function reorderTasks(reorderedTasks: Task[]): void {
@@ -175,13 +190,37 @@ function reorderTasks(reorderedTasks: Task[]): void {
     }
   })
 }
+
+function sortLists(lists: List[]): List[] {
+  const listsMap = new Map(lists.map((list) => [list.id, list]))
+
+  const firstList = lists.find((list) => {
+    if (list.prev_id === undefined) {
+      return list
+    }
+    if (listsMap.get(list.prev_id) === undefined) {
+      return list
+    }
+  })
+
+  let currentList = firstList
+
+  const sortedLists = []
+
+  while (currentList !== undefined) {
+    sortedLists.push(currentList)
+    currentList = currentList.next_id ? listsMap.get(currentList.next_id) : undefined
+  }
+
+  return sortedLists
+}
 </script>
 
 <template>
   <div class="p-3 h-screen relative">
     <div class="flex flex-row gap-4 justify-start max-h-full min-h-full">
       <BoardList
-        v-for="list in lists"
+        v-for="list in sortedLists"
         :key="list.id"
         :tasks="tasksForList.get(list.id) || []"
         :list="list"
