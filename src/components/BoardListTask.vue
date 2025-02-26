@@ -44,14 +44,14 @@ watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask], [mousePressedBe
 <template>
   <div
     ref="task"
-    :class="{ 'rotate-3 absolute dragging-card-w': isDragging }"
+    :class="{ 'rotate-3 absolute dragging-card-w cursor-grabbing! ring-blue-500': isDragging }"
     :style="isDragging ? { top: taskAbsoluteY + 'px', left: taskAbsoluteX + 'px' } : {}"
-    class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 hover:ring"
+    class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 ring"
   >
     <p class="text-gray-200 select-none">{{ task.title }}</p>
   </div>
 
-  <div :class="{ hidden: !isDragging }" class="p-2 px-3 rounded-md bg-gray-900">
+  <div :class="{ hidden: !isDragging }" class="p-2 px-3 rounded-md bg-gray-900 pointer-events-none">
     <p class="opacity-0">{{ task.title }}</p>
   </div>
 </template>
