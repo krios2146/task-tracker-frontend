@@ -24,7 +24,11 @@ const isDragging = computed(() => (draggingTask.value?.id === props.task.id ? tr
 
 const mouseOnTask = computed(() => !isOutside.value)
 
-watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask]) => {
+watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask], [mousePressedBefore, _]) => {
+  if (mousePressedBefore && mousePressed) {
+    return
+  }
+
   if (mouseOnTask && mousePressed && draggingTask.value === undefined) {
     dragAndDropStore.setDraggingTask(props.task)
     dragAndDropStore.setDraggingTaskOffsets(elementX.value, elementY.value)
