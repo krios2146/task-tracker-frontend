@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import BoardListTask from './BoardListTask.vue'
 import BoardListAddButton from './BoardListAddButton.vue'
+import BoardListDragButton from './BoardListDragButton.vue'
+import BoardListPlaceholder from './BoardListPlaceholder.vue'
 import { ref, type Ref, watch, inject, computed, useTemplateRef } from 'vue'
 import {
   useTemplateRefsList,
@@ -11,6 +13,8 @@ import {
 } from '@vueuse/core'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
 import type { MousePosition } from '@/types/mousePosition'
+import type { Task } from '@/api/Task'
+import type { List } from '@/api/List'
 
 type ElementBoundaries = {
   top: number
@@ -22,11 +26,6 @@ type ElementBoundaries = {
 type TaskBoundaries = {
   taskId: number
 } & ElementBoundaries
-
-type List = {
-  id: number
-  name: string
-}
 
 const props = defineProps<{
   tasks: Task[]
@@ -41,6 +40,7 @@ const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
 const taskElements = useTemplateRefsList<HTMLDivElement>()
 const listContainerElement = useTemplateRef<HTMLDivElement>('list-container')
 const tasksContainerElement = useTemplateRef<HTMLDivElement>('tasks-container')
+const listElement = useTemplateRef<HTMLDivElement>('list')
 
 const dragAndDropStore = useDragAndDropStore()
 
@@ -53,7 +53,9 @@ const taskAboveId = refAutoReset<number | undefined>(undefined, 100)
 const taskBelowId = refAutoReset<number | undefined>(undefined, 100)
 
 const draggingTask = computed<Task | undefined>(() => dragAndDropStore.getDraggingTask)
-const isDragging = computed<boolean>(() => draggingTask.value !== undefined)
+const isDraggingTask = computed<boolean>(() => draggingTask.value !== undefined)
+
+const isDraggingList = ref<boolean>(false)
 
 const listContainerBoundaries = computed<ElementBoundaries>(() => {
   const { top, bottom, right, left } = useElementBounding(listContainerElement)
@@ -115,7 +117,7 @@ watchDeep(
 watch(
   () => mousePosition.value,
   (mousePosition) => {
-    if (!isDragging.value || !isMouseInsideList.value) {
+    if (!isDraggingTask.value || !isMouseInsideList.value) {
       return
     }
 
@@ -165,6 +167,19 @@ watch(
     }
     excludeTask(taskToExclude)
     dragAndDropStore.taskExcluded()
+  }
+)
+
+watch(
+  () => isDraggingList.value,
+  (isDragging) => {
+    if (!isDragging) {
+      return
+    }
+    const { x, y } = useElementBounding(listElement)
+
+    dragAndDropStore.setDraggingList(props.list)
+    dragAndDropStore.setDraggingListOffsets(x.value, y.value)
   }
 )
 
@@ -272,7 +287,7 @@ function isFromThisList(task: Task): boolean {
 }
 
 function reorderTasks(targetNextTask: Task | undefined, targetPrevTask: Task | undefined): void {
-  if (!isDragging.value) {
+  if (!isDraggingTask.value) {
     return
   }
   const reorderedTasks = new Set<Task>()
@@ -350,8 +365,11 @@ function excludeTask(task: Task): void {
 
 <template>
   <div class="min-w-2xs max-w-2xs" ref="list-container">
-    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full">
-      <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
+    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full" ref="list">
+      <div class="flex flex-row justify-between items-center">
+        <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
+        <BoardListDragButton @pressed="isDraggingList = true" @released="isDraggingList = false" />
+      </div>
 
       <div
         class="flex flex-col gap-y-2 overflow-y-scroll p-0.5 scrollbar-hidden"
@@ -364,5 +382,7 @@ function excludeTask(task: Task): void {
 
       <BoardListAddButton />
     </div>
+
+    <BoardListPlaceholder :tasks="sortedTasks" :visible="isDraggingList" :list-title="list.name" />
   </div>
 </template>

@@ -1,7 +1,6 @@
-export type Task = {
+export type List = {
   id: number
-  title: string
-  list_id: number
+  name: string
   next_id: number | undefined
   prev_id: number | undefined
 }

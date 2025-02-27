@@ -4,13 +4,6 @@ import { ref, computed, provide, watch } from 'vue'
 import { useMouse, useMousePressed, watchDeep } from '@vueuse/core'
 import type { MousePosition } from '@/types/mousePosition'
 
-interface List {
-  id: number
-  name: string
-  next_id: number | undefined
-  prev_id: number | undefined
-}
-
 const lists = ref<List[]>([
   {
     id: 1,

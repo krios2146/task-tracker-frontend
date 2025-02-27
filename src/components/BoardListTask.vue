@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import BoardListTaskPlaceholder from '@/components/BoardListTaskPlaceholder.vue'
 import { useMouseInElement } from '@vueuse/core'
 import { watch, computed, useTemplateRef, inject, type Ref } from 'vue'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
 import type { MousePosition } from '@/types/mousePosition'
+import type { Task } from '@/api/Task'
 
 const props = defineProps<{ task: Task }>()
 
@@ -44,20 +46,18 @@ watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask], [mousePressedBe
 <template>
   <div
     ref="task"
-    :class="{ 'rotate-3 absolute dragging-card-w cursor-grabbing! ring-blue-500': isDragging }"
+    :class="{ 'rotate-3 absolute dragging-task-w cursor-grabbing! ring-blue-500': isDragging }"
     :style="isDragging ? { top: taskAbsoluteY + 'px', left: taskAbsoluteX + 'px' } : {}"
     class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 ring"
   >
     <p class="text-gray-200 select-none">{{ task.title }}</p>
   </div>
 
-  <div :class="{ hidden: !isDragging }" class="p-2 px-3 rounded-md bg-gray-900 pointer-events-none">
-    <p class="opacity-0">{{ task.title }}</p>
-  </div>
+  <BoardListTaskPlaceholder :task="task" :visible="isDragging" />
 </template>
 
 <style lang="css">
-.dragging-card-w {
+.dragging-task-w {
   --w-2xs: var(--container-2xs);
   --p-3: (var(--spacing) * 3) * 2;
   --p-05: (var(--spacing) * 0.5) * 2;
