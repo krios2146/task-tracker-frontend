@@ -9,7 +9,8 @@ import {
   useElementBounding,
   refAutoReset,
   watchDeep,
-  tryOnMounted
+  tryOnMounted,
+  useMouseInElement
 } from '@vueuse/core'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
 import type { MousePosition } from '@/types/mousePosition'
@@ -52,6 +53,8 @@ const taskBoundaries = ref<TaskBoundaries[]>()
 const taskAboveId = refAutoReset<number | undefined>(undefined, 100)
 const taskBelowId = refAutoReset<number | undefined>(undefined, 100)
 
+const { elementX, elementY } = useMouseInElement(listElement)
+
 const draggingTask = computed<Task | undefined>(() => dragAndDropStore.getDraggingTask)
 const isDraggingTask = computed<boolean>(() => draggingTask.value !== undefined)
 
@@ -65,6 +68,13 @@ const tasksContainerBoundaries = computed<ElementBoundaries>(() => {
   const { top, bottom, right, left } = useElementBounding(tasksContainerElement)
   return { top: top.value, bot: bottom.value, right: right.value, left: left.value }
 })
+
+const listAbsoluteX = computed(
+  () => mousePosition.value.x - (dragAndDropStore.getDraggingListOffsetX ?? 0)
+)
+const listAbsoluteY = computed(
+  () => mousePosition.value.y - (dragAndDropStore.getDraggingListOffsetY ?? 0)
+)
 
 const isMouseInsideList = computed<boolean>(() => {
   if (mousePosition.value.x < listContainerBoundaries.value.left) {
@@ -174,12 +184,12 @@ watch(
   () => isDraggingList.value,
   (isDragging) => {
     if (!isDragging) {
+      dragAndDropStore.removeDraggingList()
       return
     }
-    const { x, y } = useElementBounding(listElement)
 
     dragAndDropStore.setDraggingList(props.list)
-    dragAndDropStore.setDraggingListOffsets(x.value, y.value)
+    dragAndDropStore.setDraggingListOffsets(elementX.value, elementY.value)
   }
 )
 
@@ -365,7 +375,14 @@ function excludeTask(task: Task): void {
 
 <template>
   <div class="min-w-2xs max-w-2xs" ref="list-container">
-    <div class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full" ref="list">
+    <div
+      class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full"
+      ref="list"
+      :class="{
+        'absolute rotate-3 ring ring-blue-500 z-50 select-none min-w-2xs max-w-2xs': isDraggingList
+      }"
+      :style="isDraggingList ? { top: listAbsoluteY + 'px', left: listAbsoluteX + 'px' } : {}"
+    >
       <div class="flex flex-row justify-between items-center">
         <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
         <BoardListDragButton @pressed="isDraggingList = true" @released="isDraggingList = false" />

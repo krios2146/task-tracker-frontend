@@ -46,6 +46,10 @@ export const useDragAndDropStore = defineStore('dragAndDrop', () => {
   function removeDraggingTask(): void {
     draggingTask.value = undefined
   }
+  function removeDraggingList(): void {
+    draggingList.value = undefined
+  }
+
   function setTaskFromAnotherList(task: Task): void {
     taskOfAnotherList.value = { ...task }
   }
@@ -88,6 +92,8 @@ export const useDragAndDropStore = defineStore('dragAndDrop', () => {
     setDraggingListOffsets,
 
     removeDraggingTask,
+    removeDraggingList,
+
     setTaskFromAnotherList,
     triggerAnotherListTaskExclusion,
     taskExcluded
