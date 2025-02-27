@@ -13,20 +13,11 @@ import {
   useMouseInElement
 } from '@vueuse/core'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
-import type { MousePosition } from '@/types/mousePosition'
+import type { MousePosition } from '@/types/MousePosition'
+import type { TaskBoundaries } from '@/types/TaskBoundaries'
+import type { ElementBoundaries } from '@/types/ElementBoundaries'
 import type { Task } from '@/api/Task'
 import type { List } from '@/api/List'
-
-type ElementBoundaries = {
-  top: number
-  bot: number
-  right: number
-  left: number
-}
-
-type TaskBoundaries = {
-  taskId: number
-} & ElementBoundaries
 
 const props = defineProps<{
   tasks: Task[]
@@ -374,9 +365,9 @@ function excludeTask(task: Task): void {
 </script>
 
 <template>
-  <div class="min-w-2xs max-w-2xs" ref="list-container">
+  <div class="min-w-2xs max-w-2xs h-full" ref="list-container">
     <div
-      class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md h-fit max-h-full"
+      class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md max-h-full"
       ref="list"
       :class="{
         'absolute rotate-3 ring ring-blue-500 z-50 select-none min-w-2xs max-w-2xs': isDraggingList

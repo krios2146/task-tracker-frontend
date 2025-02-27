@@ -3,7 +3,7 @@ import BoardListTaskPlaceholder from '@/components/BoardListTaskPlaceholder.vue'
 import { useMouseInElement } from '@vueuse/core'
 import { watch, computed, useTemplateRef, inject, type Ref } from 'vue'
 import { useDragAndDropStore } from '@/stores/dragAndDropStore'
-import type { MousePosition } from '@/types/mousePosition'
+import type { MousePosition } from '@/types/MousePosition'
 import type { Task } from '@/api/Task'
 
 const props = defineProps<{ task: Task }>()
