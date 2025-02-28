@@ -367,7 +367,7 @@ function excludeTask(task: Task): void {
 <template>
   <div class="min-w-2xs max-w-2xs h-full" ref="list-container">
     <div
-      class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md max-h-full"
+      class="bg-gray-800 p-3 flex flex-col gap-y-4 rounded-md max-h-full transition ease-in-out"
       ref="list"
       :class="{
         'absolute rotate-3 ring ring-blue-500 z-50 select-none min-w-2xs max-w-2xs': isDraggingList

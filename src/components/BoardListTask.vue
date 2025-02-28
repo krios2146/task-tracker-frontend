@@ -48,7 +48,7 @@ watch([mousePressed, mouseOnTask], ([mousePressed, mouseOnTask], [mousePressedBe
     ref="task"
     :class="{ 'rotate-3 absolute dragging-task-w cursor-grabbing! ring-blue-500': isDragging }"
     :style="isDragging ? { top: taskAbsoluteY + 'px', left: taskAbsoluteX + 'px' } : {}"
-    class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 ring"
+    class="p-2 px-3 rounded-md bg-gray-950 shadow-xs shadow-black hover:cursor-pointer hover:ring-blue-500 ring transition ease-in-out"
   >
     <p class="text-gray-200 select-none">{{ task.title }}</p>
   </div>
