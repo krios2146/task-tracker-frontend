@@ -218,14 +218,14 @@ watch(
       }
 
       const left = listBoundary.left
-      const middle = middleOf(listBoundary)
+      const thirdQuarter = thirdQuarterOf(listBoundary)
       const right = listBoundary.right
 
-      if (mousePosition.x > left && mousePosition.x < middle) {
+      if (mousePosition.x > left && mousePosition.x < thirdQuarter) {
         listBeforeId.value = listBoundary.listId
         return
       }
-      if (mousePosition.x > middle && mousePosition.x < right) {
+      if (mousePosition.x > thirdQuarter && mousePosition.x < right) {
         listAfterId.value = listBoundary.listId
         return
       }
@@ -238,9 +238,9 @@ watch([listBeforeId, listAfterId], ([listBeforeId, listAfterId]) => {
   atMouseAfter(listAfterId)
 })
 
-function middleOf(list: ListBoundaries): number {
+function thirdQuarterOf(list: ListBoundaries): number {
   const width = Math.abs(list.right - list.left)
-  const middle = list.left + width / 2
+  const middle = list.left + width * 0.75
 
   return middle
 }
