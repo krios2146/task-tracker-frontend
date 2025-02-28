@@ -2,6 +2,7 @@
 import BoardListTask from './BoardListTask.vue'
 import BoardListAddButton from './BoardListAddButton.vue'
 import BoardListDragButton from './BoardListDragButton.vue'
+import BoardListHeader from './BoardListHeader.vue'
 import BoardListPlaceholder from './BoardListPlaceholder.vue'
 import { ref, type Ref, watch, inject, computed, useTemplateRef } from 'vue'
 import {
@@ -25,6 +26,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   tasksReordered: [tasks: Task[]]
+  listNameChanged: [list: List]
 }>()
 
 const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
@@ -362,6 +364,12 @@ function excludeTask(task: Task): void {
 
   emit('tasksReordered', reorderedTasks)
 }
+
+function handleNameChanged(name: string): void {
+  const list = props.list
+  list.name = name
+  emit('listNameChanged', list)
+}
 </script>
 
 <template>
@@ -374,8 +382,8 @@ function excludeTask(task: Task): void {
       }"
       :style="isDraggingList ? { top: listAbsoluteY + 'px', left: listAbsoluteX + 'px' } : {}"
     >
-      <div class="flex flex-row justify-between items-center">
-        <h2 class="text-xl text-white font-bold">{{ list.name }}</h2>
+      <div class="flex flex-row justify-between gap-x-4 items-center">
+        <BoardListHeader :name="list.name" @name-changed="handleNameChanged" />
         <BoardListDragButton @pressed="isDraggingList = true" @released="isDraggingList = false" />
       </div>
 

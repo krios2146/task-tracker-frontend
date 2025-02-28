@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BoardList from '@/components/BoardList.vue'
-import { ref, computed, provide, watch, toRaw } from 'vue'
+import { ref, computed, provide, watch } from 'vue'
 import {
   useMouse,
   useMousePressed,
@@ -384,6 +384,14 @@ function reorderLists(targetNextList: List | undefined, targetPrevList: List | u
 
   lists.value = listsCopy.value
 }
+
+function renameList(renamedList: List): void {
+  const list = lists.value.find((list) => list.id === renamedList.id)
+
+  if (list !== undefined) {
+    list.name = renamedList.name
+  }
+}
 </script>
 
 <template>
@@ -394,6 +402,7 @@ function reorderLists(targetNextList: List | undefined, targetPrevList: List | u
           :tasks="tasksForList.get(list.id) || []"
           :list="list"
           @tasks-reordered="reorderTasks"
+          @list-name-changed="renameList"
         />
       </div>
     </div>
