@@ -392,6 +392,10 @@ function renameList(renamedList: List): void {
     list.name = renamedList.name
   }
 }
+
+function addTask(task: Task): void {
+  tasks.value.push(task)
+}
 </script>
 
 <template>
@@ -403,6 +407,7 @@ function renameList(renamedList: List): void {
           :list="list"
           @tasks-reordered="reorderTasks"
           @list-name-changed="renameList"
+          @task-added="addTask"
         />
       </div>
     </div>

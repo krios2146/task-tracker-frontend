@@ -19,6 +19,7 @@ import type { TaskBoundaries } from '@/types/TaskBoundaries'
 import type { ElementBoundaries } from '@/types/ElementBoundaries'
 import type { Task } from '@/api/Task'
 import type { List } from '@/api/List'
+import { useNewTaskStore } from '@/stores/newTaskStore'
 
 const props = defineProps<{
   tasks: Task[]
@@ -27,6 +28,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   tasksReordered: [tasks: Task[]]
   listNameChanged: [list: List]
+  taskAdded: [task: Task]
 }>()
 
 const mousePosition = inject<Ref<MousePosition>>('mousePosition')!
@@ -234,7 +236,7 @@ function sortTasks(tasks: Task[]): Task[] {
 
   while (currentTask !== undefined) {
     sortedTasks.push(currentTask)
-    currentTask = currentTask.next_id ? tasksMap.get(currentTask.next_id) : undefined
+    currentTask = currentTask.next_id !== undefined ? tasksMap.get(currentTask.next_id) : undefined
   }
 
   return sortedTasks
@@ -370,6 +372,31 @@ function handleNameChanged(name: string): void {
   list.name = name
   emit('listNameChanged', list)
 }
+
+function handleAddButtonPressed(): void {
+  let lastTask = undefined
+
+  if (sortedTasks.value.length !== 0) {
+    lastTask = sortedTasks.value[sortedTasks.value.length - 1]
+  }
+
+  const emptyTask: Task = {
+    id: 0,
+    prev_id: lastTask?.id,
+    next_id: undefined,
+    list_id: props.list.id,
+    title: ''
+  }
+
+  emit('taskAdded', emptyTask)
+
+  if (lastTask !== undefined) {
+    lastTask.next_id = emptyTask.id
+    emit('tasksReordered', [lastTask])
+  }
+
+  useNewTaskStore().setTask(emptyTask)
+}
 </script>
 
 <template>
@@ -396,7 +423,7 @@ function handleNameChanged(name: string): void {
         </div>
       </div>
 
-      <BoardListAddButton />
+      <BoardListAddButton @pressed="handleAddButtonPressed" />
     </div>
 
     <BoardListPlaceholder :tasks="sortedTasks" :visible="isDraggingList" :list-title="list.name" />
